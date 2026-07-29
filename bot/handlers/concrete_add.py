@@ -21,6 +21,7 @@ from bot.keyboards.add import (
 )
 from bot.keyboards.main import main_menu_keyboard
 from bot.states.concrete import ConcreteStates
+from bot.utils.telegram import safe_edit_text
 
 router = Router()
 
@@ -29,7 +30,8 @@ router = Router()
 async def start_add_callback(query: CallbackQuery, state: FSMContext) -> None:
     await state.clear()
     await query.answer()
-    await query.message.edit_text(
+    await safe_edit_text(
+        query,
         "📅 Дата заливки\n\n"
         "Выберите дату заливки или введите свою дату в формате дд.мм.гггг.",
         reply_markup=date_keyboard(),
@@ -42,7 +44,8 @@ async def choose_today_callback(query: CallbackQuery, state: FSMContext) -> None
     poured_at = date.today().isoformat()
     await state.update_data(poured_at=poured_at)
     await query.answer("Сегодняшняя дата выбрана")
-    await query.message.edit_text(
+    await safe_edit_text(
+        query,
         "🧱 Марка бетона\n\n"
         "Выберите марку бетона.",
         reply_markup=grade_keyboard(),
@@ -73,7 +76,8 @@ async def choose_grade_callback(query: CallbackQuery, state: FSMContext) -> None
     grade = query.data.replace("grade_", "")
     await state.update_data(grade=grade)
     await query.answer(f"Марка выбрана: {grade}")
-    await query.message.edit_text(
+    await safe_edit_text(
+        query,
         "📍 Куда идёт бетон?\n\n"
         "Введите локацию или объект.",
         reply_markup=cancel_keyboard(),
@@ -109,7 +113,8 @@ async def choose_volume_callback(query: CallbackQuery, state: FSMContext) -> Non
     await state.update_data(volume=volume)
     await query.answer(f"Объём выбран: {int(volume)} м³")
 
-    await query.message.edit_text(
+    await safe_edit_text(
+        query,
         "🧪 Выберите дни испытаний\n\n"
         "Нажмите на дни, которые нужно включить. По умолчанию выбраны 7 и 28.",
         reply_markup=tests_keyboard({7, 28}),
@@ -131,7 +136,8 @@ async def toggle_test_callback(query: CallbackQuery, state: FSMContext) -> None:
         selected = {7, 28}
     await state.update_data(tests=selected)
     await query.answer(f"Выбрано: {sorted(selected)}")
-    await query.message.edit_text(
+    await safe_edit_text(
+        query,
         "🧪 Выберите дни испытаний\n\n"
         "Нажмите на дни, которые нужно включить.",
         reply_markup=tests_keyboard(selected),
@@ -174,7 +180,8 @@ async def confirm_tests_callback(query: CallbackQuery, state: FSMContext) -> Non
         await create_test_schedule(db, batch_id, day, test_volume, scheduled_at)
 
     tests_lines = "\n".join([f"{d} дн. — {schedule_volumes[i]} м³" for i, d in enumerate(days)])
-    await query.message.edit_text(
+    await safe_edit_text(
+        query,
         f"✅ Партия создана.\n"
         f"Марка: {grade}\n"
         f"Пикетаж: {picket}\n"
@@ -190,7 +197,8 @@ async def confirm_tests_callback(query: CallbackQuery, state: FSMContext) -> Non
 async def cancel_callback(query: CallbackQuery, state: FSMContext) -> None:
     await state.clear()
     await query.answer("Добавление отменено")
-    await query.message.edit_text(
+    await safe_edit_text(
+        query,
         "Отмена. Используйте главное меню.",
         reply_markup=main_menu_keyboard(),
     )

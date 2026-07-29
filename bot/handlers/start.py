@@ -4,6 +4,7 @@ from aiogram.types import Message
 
 from bot.database.queries import create_user
 from bot.keyboards.main import main_menu_keyboard
+from bot.utils.telegram import safe_edit_text
 import bot.database as db_module
 
 router = Router()
@@ -31,7 +32,8 @@ async def start_handler(message: Message) -> None:
 @router.callback_query(lambda query: query.data == "main_menu")
 async def main_menu_callback(query):
     await query.answer()
-    await query.message.edit_text(
+    await safe_edit_text(
+        query,
         "Добро пожаловать 👋\nВыберите действие:",
         reply_markup=main_menu_keyboard(),
     )

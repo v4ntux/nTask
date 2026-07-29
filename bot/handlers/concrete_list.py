@@ -4,6 +4,7 @@ from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMar
 import bot.database as db_module
 from bot.database.queries import get_batches_for_user, format_date
 from bot.keyboards.main import main_menu_keyboard
+from bot.utils.telegram import safe_edit_text
 
 router = Router()
 
@@ -44,7 +45,8 @@ async def list_batches_callback(query: CallbackQuery) -> None:
     keyboard_rows.append([InlineKeyboardButton(text="Главное меню", callback_data="main_menu")])
     markup = InlineKeyboardMarkup(inline_keyboard=keyboard_rows)
 
-    await query.message.edit_text(
+    await safe_edit_text(
+        query,
         "📋 Список бетона\n\n" + "\n".join(lines),
         reply_markup=markup,
     )

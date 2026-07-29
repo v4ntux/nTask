@@ -14,6 +14,8 @@ from bot.database.queries import (
     toggle_batch_notification,
     format_date,
 )
+from bot.utils.telegram import safe_edit_text
+from bot.utils.telegram import safe_edit_text
 
 router = Router()
 
@@ -110,7 +112,11 @@ async def render_batch_detail(db, batch_id: int, query: CallbackQuery) -> None:
     ])
     keyboard.append([InlineKeyboardButton(text="◀️ Назад", callback_data="concrete_list")])
 
-    await query.message.edit_text("\n".join(text_lines), reply_markup=InlineKeyboardMarkup(inline_keyboard=keyboard))
+    await safe_edit_text(
+        query,
+        "\n".join(text_lines),
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=keyboard),
+    )
 
 
 async def render_complete_confirmation(db, schedule_id: int, query: CallbackQuery) -> None:
@@ -124,7 +130,8 @@ async def render_complete_confirmation(db, schedule_id: int, query: CallbackQuer
         await query.answer("Партия не найдена", show_alert=True)
         return
 
-    await query.message.edit_text(
+    await safe_edit_text(
+        query,
         f"🧪 ПОДТВЕРЖДЕНИЕ ИСПЫТАНИЯ\n\n"
         f"Марка: {batch['grade']}\n"
         f"Объект: {batch['location']}\n"

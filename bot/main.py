@@ -15,6 +15,7 @@ from bot.handlers.concrete_add import register_concrete_add_handlers
 from bot.handlers.concrete_list import register_concrete_list_handlers
 from bot.handlers.notifications import register_notification_handlers
 from bot.handlers.concrete_detail import register_concrete_detail_handlers
+from bot.handlers.settings import register_settings_handlers
 from bot.scheduler.jobs import setup_scheduler
 
 
@@ -33,6 +34,7 @@ async def main() -> None:
     register_concrete_list_handlers(dp)
     register_concrete_detail_handlers(dp)
     register_notification_handlers(dp)
+    register_settings_handlers(dp)
 
     setup_scheduler(bot, db)
 

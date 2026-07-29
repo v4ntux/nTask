@@ -24,6 +24,7 @@ class Database:
                 username TEXT,
                 first_name TEXT,
                 last_name TEXT,
+                language TEXT NOT NULL DEFAULT 'ru',
                 notify_3_day INTEGER NOT NULL DEFAULT 1,
                 notify_14_day INTEGER NOT NULL DEFAULT 1
             );
@@ -96,6 +97,10 @@ class Database:
             pass
         try:
             await self.connection.execute("ALTER TABLE test_schedules ADD COLUMN notify INTEGER NOT NULL DEFAULT 1")
+        except Exception:
+            pass
+        try:
+            await self.connection.execute("ALTER TABLE users ADD COLUMN language TEXT NOT NULL DEFAULT 'ru'")
         except Exception:
             pass
         try:

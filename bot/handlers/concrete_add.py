@@ -8,6 +8,7 @@ import bot.database as db_module
 from bot.database.queries import (
     create_batch,
     create_test_schedule,
+    get_user_by_telegram,
     format_date,
     get_due_date,
     normalize_date,
@@ -21,52 +22,68 @@ from bot.keyboards.add import (
 )
 from bot.keyboards.main import main_menu_keyboard
 from bot.states.concrete import ConcreteStates
+from bot.utils.i18n import t, detect_language
 from bot.utils.telegram import safe_edit_text
 
 router = Router()
 
 
+async def _get_language_from_user(user) -> str:
+    db = db_module.db
+    if user is None:
+        return detect_language(None)
+    language = detect_language(user.language_code)
+    if db is None:
+        return language
+    user_row = await get_user_by_telegram(db, user.id)
+    return user_row.get("language", language) if user_row else language
+
+
+async def _get_language(query: CallbackQuery) -> str:
+    return await _get_language_from_user(query.from_user)
+
+
 @router.callback_query(lambda query: query.data == "concrete_add")
 async def start_add_callback(query: CallbackQuery, state: FSMContext) -> None:
+    language = await _get_language(query)
     await state.clear()
     await query.answer()
     await safe_edit_text(
         query,
-        "📅 Дата заливки\n\n"
-        "Выберите дату заливки или введите свою дату в формате дд.мм.гггг.",
-        reply_markup=date_keyboard(),
+        t(language, "choose_date"),
+        reply_markup=date_keyboard(language),
     )
     await state.set_state(ConcreteStates.date)
 
 
 @router.callback_query(lambda query: query.data == "date_today", StateFilter(ConcreteStates.date))
 async def choose_today_callback(query: CallbackQuery, state: FSMContext) -> None:
+    language = await _get_language(query)
     poured_at = date.today().isoformat()
     await state.update_data(poured_at=poured_at)
-    await query.answer("Сегодняшняя дата выбрана")
+    await query.answer(t(language, "today_selected"))
     await safe_edit_text(
         query,
-        "🧱 Марка бетона\n\n"
-        "Выберите марку бетона.",
-        reply_markup=grade_keyboard(),
+        t(language, "choose_grade"),
+        reply_markup=grade_keyboard(language),
     )
     await state.set_state(ConcreteStates.grade)
 
 
 @router.message(ConcreteStates.date)
 async def enter_date_handler(message: Message, state: FSMContext) -> None:
+    language = await _get_language_from_user(message.from_user)
     poured_at = normalize_date(message.text)
     if poured_at is None:
         await message.answer(
-            "Неверный формат даты. Введите дату в формате дд.мм.гггг или нажмите кнопку Сегодня.",
-            reply_markup=date_keyboard(),
+            t(language, "invalid_date"),
+            reply_markup=date_keyboard(language),
         )
         return
     await state.update_data(poured_at=poured_at)
     await message.answer(
-        "🧱 Марка бетона\n\n"
-        "Выберите марку бетона.",
-        reply_markup=grade_keyboard(),
+        t(language, "choose_grade"),
+        reply_markup=grade_keyboard(language),
     )
     await state.set_state(ConcreteStates.grade)
 
@@ -74,35 +91,35 @@ async def enter_date_handler(message: Message, state: FSMContext) -> None:
 @router.callback_query(lambda query: query.data.startswith("grade_"), StateFilter(ConcreteStates.grade))
 async def choose_grade_callback(query: CallbackQuery, state: FSMContext) -> None:
     grade = query.data.replace("grade_", "")
+    language = await _get_language(query)
     await state.update_data(grade=grade)
-    await query.answer(f"Марка выбрана: {grade}")
+    await query.answer(t(language, "grade_label", grade=grade))
     await safe_edit_text(
         query,
-        "📍 Куда идёт бетон?\n\n"
-        "Введите локацию или объект.",
-        reply_markup=cancel_keyboard(),
+        t(language, "enter_location"),
+        reply_markup=cancel_keyboard(language),
     )
     await state.set_state(ConcreteStates.location)
 
 
 @router.message(ConcreteStates.location)
 async def enter_location_handler(message: Message, state: FSMContext) -> None:
+    language = await _get_language_from_user(message.from_user)
     await state.update_data(location=message.text.strip())
     await message.answer(
-        "🏷️ Пикетаж\n\n"
-        "Введите пикетаж.",
-        reply_markup=cancel_keyboard(),
+        t(language, "enter_picket"),
+        reply_markup=cancel_keyboard(language),
     )
     await state.set_state(ConcreteStates.picket)
 
 
 @router.message(ConcreteStates.picket)
 async def enter_picket_handler(message: Message, state: FSMContext) -> None:
+    language = await _get_language_from_user(message.from_user)
     await state.update_data(picket=message.text.strip())
     await message.answer(
-        "📦 Объём\n\n"
-        "Выберите объём бетонной партии.",
-        reply_markup=volume_keyboard(),
+        t(language, "choose_volume"),
+        reply_markup=volume_keyboard(language),
     )
     await state.set_state(ConcreteStates.volume)
 
@@ -111,13 +128,13 @@ async def enter_picket_handler(message: Message, state: FSMContext) -> None:
 async def choose_volume_callback(query: CallbackQuery, state: FSMContext) -> None:
     volume = float(query.data.replace("volume_", ""))
     await state.update_data(volume=volume)
-    await query.answer(f"Объём выбран: {int(volume)} м³")
+    language = await _get_language(query)
+    await query.answer(t(language, "volume_total", total_volume=int(volume)))
 
     await safe_edit_text(
         query,
-        "🧪 Выберите дни испытаний\n\n"
-        "Нажмите на дни, которые нужно включить. По умолчанию выбраны 7 и 28.",
-        reply_markup=tests_keyboard({7, 28}),
+        t(language, "choose_test_days_default"),
+        reply_markup=tests_keyboard(language, {7, 28}),
     )
     await state.update_data(tests={7, 28})
     await state.set_state(ConcreteStates.tests)
@@ -135,25 +152,26 @@ async def toggle_test_callback(query: CallbackQuery, state: FSMContext) -> None:
     if not selected:
         selected = {7, 28}
     await state.update_data(tests=selected)
-    await query.answer(f"Выбрано: {sorted(selected)}")
+    language = await _get_language(query)
+    await query.answer(t(language, "done_button"))
     await safe_edit_text(
         query,
-        "🧪 Выберите дни испытаний\n\n"
-        "Нажмите на дни, которые нужно включить.",
-        reply_markup=tests_keyboard(selected),
+        t(language, "choose_test_days"),
+        reply_markup=tests_keyboard(language, selected),
     )
 
 
 @router.callback_query(lambda query: query.data == "tests_confirm", StateFilter(ConcreteStates.tests))
 async def confirm_tests_callback(query: CallbackQuery, state: FSMContext) -> None:
+    language = await _get_language(query)
     data = await state.get_data()
     if not data.get("tests"):
-        await query.answer("Выберите хотя бы один день.", show_alert=True)
+        await query.answer(t(language, "select_at_least_one_day"), show_alert=True)
         return
 
     db = db_module.db
     if db is None or query.from_user is None:
-        await query.answer("Ошибка базы данных.", show_alert=True)
+        await query.answer(t(language, "db_error"), show_alert=True)
         return
 
     poured_at = data["poured_at"]
@@ -165,7 +183,7 @@ async def confirm_tests_callback(query: CallbackQuery, state: FSMContext) -> Non
 
     user_id_row = await db.fetchone("SELECT id FROM users WHERE telegram_id = ?", (query.from_user.id,))
     if user_id_row is None:
-        await query.answer("Пользователь не найден.", show_alert=True)
+        await query.answer(t(language, "user_not_found"), show_alert=True)
         return
 
     user_id = user_id_row[0]
@@ -179,16 +197,16 @@ async def confirm_tests_callback(query: CallbackQuery, state: FSMContext) -> Non
         scheduled_at = get_due_date(poured_at, day)
         await create_test_schedule(db, batch_id, day, test_volume, scheduled_at)
 
-    tests_lines = "\n".join([f"{d} дн. — {schedule_volumes[i]} м³" for i, d in enumerate(days)])
+    tests_lines = "\n".join([f"{d} {t(language, 'days_label')} — {schedule_volumes[i]} м³" for i, d in enumerate(days)])
     await safe_edit_text(
         query,
-        f"✅ Партия создана.\n"
-        f"Марка: {grade}\n"
-        f"Пикетаж: {picket}\n"
-        f"Дата заливки: {format_date(poured_at)}\n"
-        f"Объём: {volume} м³\n\n"
-        f"Планы испытаний:\n{tests_lines}",
-        reply_markup=main_menu_keyboard(),
+        t(language, "batch_created") + "\n"
+        f"{t(language, 'grade_label', grade=grade)}\n"
+        f"{t(language, 'picket_label', location=picket)}\n"
+        f"{t(language, 'poured_label', poured_at=format_date(poured_at))}\n"
+        f"{t(language, 'volume_total', total_volume=int(volume))}\n\n"
+        f"{t(language, 'test_plan_title')}\n{tests_lines}",
+        reply_markup=main_menu_keyboard(language),
     )
     await state.clear()
 
@@ -196,11 +214,12 @@ async def confirm_tests_callback(query: CallbackQuery, state: FSMContext) -> Non
 @router.callback_query(lambda query: query.data == "cancel")
 async def cancel_callback(query: CallbackQuery, state: FSMContext) -> None:
     await state.clear()
-    await query.answer("Добавление отменено")
+    language = await _get_language(query)
+    await query.answer(t(language, "use_main_menu"))
     await safe_edit_text(
         query,
-        "Отмена. Используйте главное меню.",
-        reply_markup=main_menu_keyboard(),
+        t(language, "use_main_menu"),
+        reply_markup=main_menu_keyboard(language),
     )
 
 

@@ -4,10 +4,14 @@ from typing import Any
 from bot.database.db import Database
 
 
-async def create_user(db: Database, telegram_id: int, username: str | None, first_name: str | None, last_name: str | None) -> int:
+async def create_user(db: Database, telegram_id: int, username: str | None, first_name: str | None, last_name: str | None, language: str = "ru") -> int:
     await db.execute(
-        "INSERT OR IGNORE INTO users (telegram_id, username, first_name, last_name) VALUES (?, ?, ?, ?)",
-        (telegram_id, username, first_name, last_name),
+        "INSERT OR IGNORE INTO users (telegram_id, username, first_name, last_name, language) VALUES (?, ?, ?, ?, ?)",
+        (telegram_id, username, first_name, last_name, language),
+    )
+    await db.execute(
+        "UPDATE users SET username = ?, first_name = ?, last_name = ? WHERE telegram_id = ?",
+        (username, first_name, last_name, telegram_id),
     )
     await db.commit()
     row = await db.fetchone(
@@ -200,6 +204,22 @@ async def get_all_users(db: Database) -> list[dict[str, Any]]:
         "SELECT id, telegram_id FROM users",
     )
     return [dict(zip(["id", "telegram_id"], row)) for row in rows]
+
+
+async def get_user_by_telegram(db: Database, telegram_id: int) -> dict[str, Any] | None:
+    row = await db.fetchone(
+        "SELECT id, language FROM users WHERE telegram_id = ?",
+        (telegram_id,),
+    )
+    return None if row is None else dict(zip(["id", "language"], row))
+
+
+async def set_user_language(db: Database, telegram_id: int, language: str) -> None:
+    await db.execute(
+        "UPDATE users SET language = ? WHERE telegram_id = ?",
+        (language, telegram_id),
+    )
+    await db.commit()
 
 
 async def get_batch_notification_settings_by_batch(db: Database, batch_id: int) -> dict[str, Any] | None:

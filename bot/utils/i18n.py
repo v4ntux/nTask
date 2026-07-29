@@ -21,6 +21,9 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "enter_location": "📍 Куда идёт бетон?\n\nВведите локацию или объект.",
         "enter_picket": "🏷️ Пикетаж\n\nВведите пикетаж.",
         "choose_volume": "📦 Объём\n\nВыберите объём бетонной партии.",
+        "volume_3": "3 кубика",   
+        "volume_6": "6 кубиков",   
+        "volume_12": "12 кубиков", 
         "choose_test_days": "🧪 Выберите дни испытаний\n\nНажмите на дни, которые нужно включить.",
         "choose_test_days_default": "🧪 Выберите дни испытаний\n\nНажмите на дни, которые нужно включить. По умолчанию выбраны 7 и 28.",
         "batch_created": "✅ Партия создана.",
@@ -34,7 +37,7 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "choose_language": "Выберите язык:",
         "language_ru": "Русский",
         "language_en": "English",
-        "language_selected": "Язык установлен: {language}",
+        "language_selected": "Язык установлен: {language_name}",
         "back": "◀️ Назад",
         "confirm_test": "✅ Подтвердить",
         "confirm_cancel": "❌ Отмена",
@@ -87,6 +90,9 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "enter_location": "📍 Where is the concrete going?\n\nEnter a location or site.",
         "enter_picket": "🏷️ Picket\n\nEnter the picket.",
         "choose_volume": "📦 Volume\n\nChoose the batch volume.",
+        "volume_3": "3 cubes",
+        "volume_6": "6 cubes",
+        "volume_12": "12 cubes",
         "choose_test_days": "🧪 Choose test days\n\nTap the days you want to include.",
         "choose_test_days_default": "🧪 Choose test days\n\nTap the days you want to include. Defaults are 7 and 28.",
         "batch_created": "✅ Batch created.",
@@ -100,7 +106,7 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "choose_language": "Choose language:",
         "language_ru": "Русский",
         "language_en": "English",
-        "language_selected": "Language set: {language}",
+        "language_selected": "Language set: {language_name}",
         "back": "◀️ Back",
         "confirm_test": "✅ Confirm",
         "confirm_cancel": "❌ Cancel",
@@ -164,3 +170,4 @@ async def get_user_language(db, telegram_id: int) -> str:
     if user and user.get("language"):
         return user["language"]
     return DEFAULT_LANGUAGE
+

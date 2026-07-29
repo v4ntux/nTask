@@ -45,10 +45,11 @@ async def set_language_callback(query: CallbackQuery) -> None:
 
     language = "ru" if query.data == "set_lang_ru" else "en"
     await set_user_language(db, query.from_user.id, language)
-    await query.answer(t(language, "language_selected", language=t(language, f"language_{language}")))
+    language_name = t(language, f"language_{language}")
+    await query.answer(t(language, "language_selected", language_name=language_name))
     await safe_edit_text(
         query,
-        t(language, "language_selected", language=t(language, f"language_{language}")),
+        t(language, "language_selected", language_name=language_name),
         reply_markup=main_menu_keyboard(language),
     )
 

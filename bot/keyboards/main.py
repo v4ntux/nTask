@@ -9,4 +9,4 @@ def main_menu_keyboard(language: str) -> InlineKeyboardMarkup:
         InlineKeyboardButton(text=t(language, "add_concrete_button"), callback_data="concrete_add"),
         InlineKeyboardButton(text=t(language, "settings_button"), callback_data="settings"),
     ]
-    return InlineKeyboardMarkup(inline_keyboard=[buttons])
+    return InlineKeyboardMarkup(inline_keyboard=[[button] for button in buttons])

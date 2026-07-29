@@ -202,7 +202,7 @@ async def confirm_tests_callback(query: CallbackQuery, state: FSMContext) -> Non
         query,
         t(language, "batch_created") + "\n"
         f"{t(language, 'grade_label', grade=grade)}\n"
-        f"{t(language, 'picket_label', location=picket)}\n"
+        f"{t(language, 'picket_label', picket=picket)}\n"
         f"{t(language, 'poured_label', poured_at=format_date(poured_at))}\n"
         f"{t(language, 'volume_total', total_volume=int(volume))}\n\n"
         f"{t(language, 'test_plan_title')}\n{tests_lines}",

@@ -1,6 +1,6 @@
 from aiogram import Router
 from aiogram.filters.command import CommandStart
-from aiogram.types import Message
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message
 
 from bot.database.queries import create_user, get_user_by_telegram
 from bot.keyboards.main import main_menu_keyboard
@@ -15,7 +15,15 @@ router = Router()
 async def start_handler(message: Message) -> None:
     db = db_module.db
     language = detect_language(message.from_user.language_code if message.from_user else None)
+    is_new_user = False
+
     if db is not None and message.from_user is not None:
+        user_row = await db.fetchone(
+            "SELECT id FROM users WHERE telegram_id = ?",
+            (message.from_user.id,),
+        )
+        if user_row is None:
+            is_new_user = True
         await create_user(
             db,
             telegram_id=message.from_user.id,
@@ -24,6 +32,16 @@ async def start_handler(message: Message) -> None:
             last_name=message.from_user.last_name,
             language=language,
         )
+
+    if is_new_user:
+        await message.answer(
+            t(language, "settings_title") + "\n\n" + t(language, "choose_language"),
+            reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+                [InlineKeyboardButton(text=t(language, "language_ru"), callback_data="set_lang_ru")],
+                [InlineKeyboardButton(text=t(language, "language_en"), callback_data="set_lang_en")],
+            ]),
+        )
+        return
 
     await message.answer(t(language, "main_menu_title"), reply_markup=main_menu_keyboard(language))
 
